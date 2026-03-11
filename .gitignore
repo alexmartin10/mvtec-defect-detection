@@ -1,0 +1,15 @@
+#Dataset
+data/
+
+#Python
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Modèles lourds
+model/*.pt
+model/*.pth
