@@ -87,26 +87,32 @@ train_data = ImageDataset("../../data/bottle/bottle/train/good")
 memory_bank = get_patch_features(train_data)
 memory_bank = random_subsample(memory_bank, ratio=0.1)
 
-dg = ImageDataset("../../data/bottle/bottle/test/good")
-dbl = ImageDataset("../../data/bottle/bottle/test/broken_large")
-dbs = ImageDataset("../../data/bottle/bottle/test/broken_small")
-dc = ImageDataset("../../data/bottle/bottle/test/contamination")
+data_test_good = ImageDataset("../../data/bottle/bottle/test/good")
+data_test_broken_large = ImageDataset("../../data/bottle/bottle/test/broken_large")
+data_test_broken_small = ImageDataset("../../data/bottle/bottle/test/broken_small")
+data_test_contamination = ImageDataset("../../data/bottle/bottle/test/contamination")
 
-sg = get_score_dataset(dg)
-sbl = get_score_dataset(dbl)
-sbs = get_score_dataset(dbs)
-sc = get_score_dataset(dc)
+score_good = get_score_dataset(data_test_good)
+score_broken_large = get_score_dataset(data_test_broken_large)
+score_broken_small = get_score_dataset(data_test_broken_small)
+score_contamination = get_score_dataset(data_test_contamination)
 
 score_training = get_score_dataset(train_data)
 
 threshold = np.percentile(score_training, 95)
 
-labels = [0] * len(sg) + [1] * (len(sbs)+len(sbl)+len(sc))
+labels = [0] * len(score_good) \
+    + [1] * (
+       len(score_broken_small) \
+        + len(score_broken_large) \
+        + len(score_contamination)
+        )
+
 result = np.concat((
-    np.int32(sg>threshold),
-    np.int32(sbs>threshold),
-    np.int32(sbl>threshold),
-    np.int32(sc>threshold)
+    np.int32(score_good>threshold),
+    np.int32(score_broken_small>threshold),
+    np.int32(score_broken_large>threshold),
+    np.int32(score_contamination>threshold)
 ))
 
 roc_auc_score(labels, result)
