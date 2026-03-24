@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 import torchvision.models as models
+from pathlib import Path
 
 device = torch.accelerator.current_accelerator() if torch.accelerator.is_available() else torch.device('cpu')
 
@@ -37,7 +38,8 @@ def get_patch_features(dataset):
         for img in dataset:
             img = img.to(device)
             backbone(img.unsqueeze(0))
-            torch.accelerator.empty_cache()
+            if torch.accelerator.is_available():
+                torch.accelerator.empty_cache()
 
     f2 = features['layer2']
     f3 = features['layer3']
@@ -62,7 +64,8 @@ def get_score_dataset(d):
         with torch.no_grad():
             image = image.to(device)
             _ = backbone(image.unsqueeze(0))
-            torch.accelerator.empty_cache()
+            if torch.accelerator.is_available():
+                torch.accelerator.empty_cache() 
 
         f2 = f['layer2'][-1].unsqueeze(0)
         f3 = f['layer3'][-1].unsqueeze(0)
@@ -89,14 +92,17 @@ def get_score_dataset(d):
 
     return scores
 
-train_data = ImageDataset("../../data/bottle/bottle/train/good")
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DATA_BASE_DIR = BASE_DIR / "data" / "bottle" / "bottle"
+
+train_data = ImageDataset(DATA_BASE_DIR/"train"/"good")
 memory_bank = get_patch_features(train_data)
 memory_bank = random_subsample(memory_bank, ratio=0.1)
 
-data_test_good = ImageDataset("../../data/bottle/bottle/test/good")
-data_test_broken_large = ImageDataset("../../data/bottle/bottle/test/broken_large")
-data_test_broken_small = ImageDataset("../../data/bottle/bottle/test/broken_small")
-data_test_contamination = ImageDataset("../../data/bottle/bottle/test/contamination")
+data_test_good = ImageDataset(DATA_BASE_DIR/"test"/"good")
+data_test_broken_large = ImageDataset(DATA_BASE_DIR/"train"/"broken_large")
+data_test_broken_small = ImageDataset(DATA_BASE_DIR/"test"/"broken_small")
+data_test_contamination = ImageDataset(DATA_BASE_DIR/"test"/"contamination")
 
 score_good = get_score_dataset(data_test_good)
 score_broken_large = get_score_dataset(data_test_broken_large)
@@ -118,10 +124,10 @@ all_scores = score_good + score_broken_small + score_broken_large + score_contam
 
 print(f"ROC AUC score : {roc_auc_score(labels, all_scores)}")
 
-# torch.save(
-#     {
-#     'memory_bank': memory_bank,
-#     'threshold': threshold
-#     },
-#     'patchcore.pt'
-#     )
+torch.save(
+    {
+    'memory_bank': memory_bank,
+    'threshold': threshold
+    },
+    'patchcore.pt'
+    )
