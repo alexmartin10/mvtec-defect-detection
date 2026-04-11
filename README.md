@@ -41,7 +41,6 @@ mvtec-defect-detection/
 │   └── model.py        # PatchCore inference class
 ├── model/
 │   └── patchcore.pt    # memory bank + threshold
-├── notebooks/          # exploration & evaluation
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
