@@ -86,7 +86,7 @@ curl -X POST https://patchcore-api-122329804522.europe-west1.run.app/predict \
 **With Docker (recommended):**
 
 ```bash
-git clone https://github.com/your-username/mvtec-defect-detection
+git clone https://github.com/alexmartin10/mvtec-defect-detection
 cd mvtec-defect-detection
 docker build -t patchcore-api .
 docker run -p 8000:8000 patchcore-api
