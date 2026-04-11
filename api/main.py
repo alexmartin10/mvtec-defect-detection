@@ -6,7 +6,7 @@ from pathlib import Path
 from torchvision.io import decode_image
 
 BASE_PATH = Path(__file__).resolve().parent.parent
-CHECKPOINT_PATH = BASE_PATH/'model'/'v2'/'patchcore.pt'
+CHECKPOINT_PATH = BASE_PATH/'model'/'patchcore.pt'
 
 app = FastAPI()
 patchcore = PatchCore(checkpoint_path=CHECKPOINT_PATH)
