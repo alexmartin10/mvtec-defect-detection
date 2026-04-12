@@ -8,7 +8,7 @@ from pathlib import Path
 from sklearn.metrics import roc_auc_score
 
 from dataset import ImageDataset
-from sampler import GreedyCoresetSampler
+from sampler import RandomSampler
 
 logging.basicConfig(
     level=logging.INFO,
@@ -100,7 +100,7 @@ def main():
     BASE_DIR = Path(__file__).resolve().parent.parent
     DATA_BASE_DIR = BASE_DIR / "data" / "bottle" / "bottle"
 
-    sampler = GreedyCoresetSampler(ratio=0.1)
+    sampler = RandomSampler(ratio=0.1)
 
     train_data = ImageDataset(DATA_BASE_DIR/"train"/"good")
     memory_bank = get_patch_features(train_data, backbone, device)
