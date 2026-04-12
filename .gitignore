@@ -13,3 +13,6 @@ __pycache__/
 # Modèles lourds
 model/*.pt
 model/*.pth
+
+#Logs
+*.log
