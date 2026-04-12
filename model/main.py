@@ -22,12 +22,20 @@ logger = logging.getLogger(__name__)
 
 torch.manual_seed(42)
 
-def make_hook(name, features):
+def make_hook(
+    name:str,
+    features:dict[str, torch.Tensor]
+):
     def hook_fn(module, input, output):
         features[name] = output
     return hook_fn
 
-def extract_features(image, features, backbone, device):
+def extract_features(
+        image: torch.Tensor,
+        features: dict[str, torch.Tensor],
+        backbone: torch.nn.Module,
+        device: torch.device
+):
     with torch.no_grad():
         image = image.to(device)
         backbone(image.unsqueeze(0))
@@ -43,7 +51,11 @@ def extract_features(image, features, backbone, device):
 
     return combined.permute(0, 2, 3, 1).reshape(-1, C)
 
-def get_patch_features(dataset, backbone, device):
+def get_patch_features(
+    dataset: torch.utils.data.Dataset,
+    backbone: torch.nn.Module,
+    device: torch.device
+):
     backbone.to(device)
     backbone.eval()
 
@@ -61,7 +73,12 @@ def get_patch_features(dataset, backbone, device):
 
     return torch.cat(all_patches, dim=0)
 
-def get_score_dataset(dataset, memory_bank, backbone, device):
+def get_score_dataset(
+    dataset: torch.utils.data.Dataset,
+    memory_bank: torch.Tensor, 
+    backbone: torch.nn.Module, 
+    device: torch.device
+):
     backbone.to(device)
     backbone.eval()
 
@@ -90,7 +107,10 @@ def get_score_dataset(dataset, memory_bank, backbone, device):
 
     return scores
 
-def auroc_score(score_good, score_broken):
+def auroc_score(
+    score_good: list,
+    score_broken: list
+):
     if len(score_good) == 0 or len(score_broken) == 0:
         raise ValueError("At least one argument is empty")
     labels = [0] * len(score_good) + [1] * len(score_broken)

@@ -5,7 +5,10 @@ from torch.utils.data import Dataset
 from torchvision.io import decode_image
 
 class ImageDataset(Dataset):
-    def __init__(self, root_dir):
+    def __init__(
+        self,
+        root_dir: str
+    ):
         self.root_dir = root_dir
         self.transform = v2.Compose([
             v2.Resize((256, 256)),

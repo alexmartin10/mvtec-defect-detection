@@ -3,8 +3,8 @@ import torch
 class GreedyCoresetSampler:
     def __init__(
         self,
-        ratio:float,
-        dimension_linear_projection=128
+        ratio: float,
+        dimension_linear_projection: int =128
     ):
         if not 0 < ratio < 1:
             raise ValueError("Ratio must be a number between 0 and 1")
@@ -29,7 +29,8 @@ class GreedyCoresetSampler:
 
 
     def sample(
-        self, features: torch.Tensor
+        self,
+        features: torch.Tensor
     ):
         subset_length = int(len(features) * self.ratio)
         feat = self._reduce_feature(features)
@@ -66,10 +67,16 @@ class GreedyCoresetSampler:
 
 
 class RandomSampler:
-    def __init__(self, ratio):
+    def __init__(
+        self,
+        ratio: float
+    ):
         self.ratio = ratio
 
-    def sample(self, features):
+    def sample(
+        self,
+        features: torch.Tensor
+    ):
         n_samples = int(len(features) * self.ratio)
         indices = torch.randperm(len(features))[:n_samples]
         return features[indices]
