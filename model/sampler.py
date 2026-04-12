@@ -1,36 +1,74 @@
 import torch
 
-class Sampler:
-    def __init__(self, memory_bank:torch.Tensor, ratio, linear_projection=None):
-        self.memory_bank = memory_bank
-        self.memory_bank_nrows, self.memory_bank_ncolumns = self.memory_bank.size()
+class GreedyCoresetSampler:
+    def __init__(
+        self,
+        ratio:float,
+        dimension_linear_projection=128
+    ):
+        if not 0 < ratio < 1:
+            raise ValueError("Ratio must be a number between 0 and 1")
         self.ratio = ratio
-        self.linear_projection = linear_projection
+        self.dimension_linear_projection = dimension_linear_projection
+    
+    def _reduce_feature(
+        self,
+        feature:torch.Tensor
+    ):
+        if feature.shape[1] == self.dimension_linear_projection:
+            return feature
+        elif feature.shape[1] < self.dimension_linear_projection:
+            return feature
+        else:
+            linear_projection = torch.nn.Linear(
+                feature.shape[1],
+                self.dimension_linear_projection,
+                bias=False
+            )
+            return linear_projection(feature)
 
-    def _compute_subset_lenght(self):
-        h, _ = self.memory_bank.size()
-        len_subset = int(h * self.ratio)
-        self.len_subset = len_subset
+    def sample(
+        self, features: torch.Tensor
+    ):
+        subset_length = int(len(features) * self.ratio)
+        feat = self._reduce_feature(features)
 
-    def sample(self):
-        """
-        in : memory bank, tensor of tensors
-        out : subset of memory bank
-        """
-        mask = torch.zeros(self.memory_bank_nrows, dtype=bool)
-        self._compute_subset_lenght()
-        #premier coup, pas d'élément dans Mc, on calcule la distance à l'origine
-        zeros = torch.zeros((1, self.memory_bank_ncolumns))
-        d = torch.cdist(self.memory_bank, zeros)  #size (nrows, 1)
-        i = torch.argmax(d, dim=1)
-        mask[i] = True
+        # Remainig indices in tensor to subsample
+        remaining_indices = list(range(len(features)))
 
-        for _ in range(self.len_subset - 1):
-            mc = self.memory_bank[mask]
-            mem = self.memory_bank[torch.logical_not(mask)]
-            d = torch.cdist(mem, mc)
-            m = torch.amin(d, dim=1)
-            i = torch.argmax(m)
-            mask[i] = True
+        origin = torch.zeros((1, feat.shape[1]))
+        d = torch.cdist(feat, origin)  # (N, 1)
 
-        return self.memory_bank[mask]
+        selected = []
+
+        for _ in range(subset_length):
+            # Finding point to add to coreset
+            m = torch.amin(d, dim=1)          
+            local_i = torch.argmax(m).item()  
+
+            # Finding associated original associated index
+            original_i = remaining_indices[local_i]
+            selected.append(original_i)
+
+            new_element = feat[local_i].unsqueeze(0)  # (1, D)
+            feat = torch.cat((feat[:local_i], feat[local_i+1:]), dim=0)
+            d    = torch.cat((d[:local_i],    d[local_i+1:]),    dim=0)
+            remaining_indices.pop(local_i)
+
+            # Update distance matrix to avoid calculating the whole each time
+            dist_to_new = torch.cdist(feat, new_element)  # (N-1, 1)
+            d = torch.cat((d, dist_to_new), dim=1)
+
+        mask = torch.zeros(len(features), dtype=torch.bool)
+        mask[selected] = True
+        return features[mask]
+
+
+class RandomSampler:
+    def __init__(self, ratio):
+        self.ratio = ratio
+
+    def sample(self, features):
+        n_samples = int(len(features) * self.ratio)
+        indices = torch.randperm(len(features))[:n_samples]
+        return features[indices]
