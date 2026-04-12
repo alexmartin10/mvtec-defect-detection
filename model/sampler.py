@@ -10,22 +10,23 @@ class GreedyCoresetSampler:
             raise ValueError("Ratio must be a number between 0 and 1")
         self.ratio = ratio
         self.dimension_linear_projection = dimension_linear_projection
+        self.linear_projection = None
     
     def _reduce_feature(
         self,
         feature:torch.Tensor
     ):
-        if feature.shape[1] == self.dimension_linear_projection:
+        if feature.shape[1] <= self.dimension_linear_projection:
             return feature
-        elif feature.shape[1] < self.dimension_linear_projection:
-            return feature
-        else:
-            linear_projection = torch.nn.Linear(
+        if self.linear_projection is None:
+            self.linear_projection = torch.nn.Linear(
                 feature.shape[1],
                 self.dimension_linear_projection,
                 bias=False
             )
-            return linear_projection(feature)
+        with torch.no_grad():
+            return self.linear_projection(feature)
+
 
     def sample(
         self, features: torch.Tensor

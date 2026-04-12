@@ -11,13 +11,11 @@ class ImageDataset(Dataset):
             v2.Resize((256, 256)),
             v2.ToDtype(torch.float32, scale=True)
         ])
-        self.img = list(Path(self.root_dir).rglob("*.png"))
+        self.image_paths = list(Path(self.root_dir).rglob("*.png"))
 
     def __len__(self):
-        return len(self.img)
+        return len(self.image_paths)
 
     def __getitem__(self, idx):
-        image = decode_image(self.img[idx])
-        if self.transform:
-            image = self.transform(image)
-        return image
+        image = decode_image(self.image_paths[idx])
+        return self.transform(image)
