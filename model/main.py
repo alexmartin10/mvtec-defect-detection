@@ -19,13 +19,8 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-logger.info('program starting')
 
 torch.manual_seed(42)
-
-device = torch.accelerator.current_accelerator() if torch.accelerator.is_available() else torch.device('cpu')
-
-backbone = models.resnet18(weights='DEFAULT')
 
 def make_hook(name, features):
     def hook_fn(module, input, output):
@@ -95,7 +90,17 @@ def get_score_dataset(dataset, memory_bank, backbone, device):
 
     return scores
 
+def auroc_score(score_good, score_broken):
+    if len(score_good) == 0 or len(score_broken) == 0:
+        raise ValueError("At least one argument is empty")
+    labels = [0] * len(score_good) + [1] * len(score_broken)
+    scores = score_good + score_broken
+    return roc_auc_score(labels, scores)
+
 def main():
+    device = torch.accelerator.current_accelerator() if torch.accelerator.is_available() else torch.device('cpu')
+
+    backbone = models.resnet18(weights='DEFAULT')
 
     BASE_DIR = Path(__file__).resolve().parent.parent
     DATA_BASE_DIR = BASE_DIR / "data" / "bottle" / "bottle"
@@ -119,13 +124,6 @@ def main():
     score_training = get_score_dataset(train_data, memory_bank, backbone, device)
 
     threshold = np.percentile(score_training, 95)
-
-    def auroc_score(score_good, score_broken):
-        if len(score_good) == 0 or len(score_broken) == 0:
-            raise ValueError("At least one argument is empty")
-        labels = [0] * len(score_good) + [1] * len(score_broken)
-        scores = score_good + score_broken
-        return roc_auc_score(labels, scores)
 
     global_auroc_score = auroc_score(score_good, score_broken_small + score_broken_large + score_contamination)
     logger.info(f"ROC AUC score : {global_auroc_score}")
