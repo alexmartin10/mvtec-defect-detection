@@ -26,6 +26,15 @@ def make_hook(
     name:str,
     features:dict[str, torch.Tensor]
 ):
+    """Create a forward hook that stores layer output in a dictionary.
+ 
+    Args:
+        name: Key under which the output will be stored in features.
+        features: Dictionary to store the captured layer outputs.
+ 
+    Returns:
+        A hook function compatible with register_forward_hook.
+    """
     def hook_fn(module, input, output):
         features[name] = output
     return hook_fn
@@ -35,7 +44,21 @@ def extract_features(
         features: dict[str, torch.Tensor],
         backbone: torch.nn.Module,
         device: torch.device
-):
+) -> torch.Tensor:
+    """Extract patch features for all images in a dataset.
+ 
+    Registers forward hooks on layer2 and layer3 of the backbone,
+    runs inference on each image, and accumulates patch features
+    into a single memory bank tensor.
+ 
+    Args:
+        dataset: Dataset of images to process.
+        backbone: Pretrained ResNet backbone.
+        device: Device on which to run inference.
+ 
+    Returns:
+        Memory bank tensor of shape (N_patches, C_combined).
+    """
     with torch.no_grad():
         image = image.to(device)
         backbone(image.unsqueeze(0))
@@ -55,7 +78,22 @@ def get_patch_features(
     dataset: torch.utils.data.Dataset,
     backbone: torch.nn.Module,
     device: torch.device
-):
+) -> list:
+    """Compute anomaly scores for all images in a dataset.
+ 
+    For each image, extracts patch features and computes the maximum
+    nearest-neighbor distance to the memory bank. A high score indicates
+    that at least one patch is far from all normal patches.
+ 
+    Args:
+        dataset: Dataset of images to score.
+        memory_bank: Tensor of normal patch features of shape (N, C).
+        backbone: Pretrained ResNet backbone.
+        device: Device on which to run inference.
+ 
+    Returns:
+        List of anomaly scores, one per image.
+    """
     backbone.to(device)
     backbone.eval()
 
@@ -78,7 +116,19 @@ def get_score_dataset(
     memory_bank: torch.Tensor, 
     backbone: torch.nn.Module, 
     device: torch.device
-):
+) -> float:
+    """Compute the AUROC score between normal and anomalous samples.
+ 
+    Args:
+        score_good: List of anomaly scores for defect-free images.
+        score_broken: List of anomaly scores for defective images.
+ 
+    Returns:
+        AUROC score as a float between 0 and 1.
+ 
+    Raises:
+        ValueError: If either input list is empty.
+    """
     backbone.to(device)
     backbone.eval()
 
@@ -148,17 +198,9 @@ def main():
     global_auroc_score = auroc_score(score_good, score_broken_small + score_broken_large + score_contamination)
     logger.info(f"ROC AUC score : {global_auroc_score}")
 
-    # AUROC broken_large
-    broken_large_auroc_score = auroc_score(score_good, score_broken_large)
-    logger.info(f"ROC AUC score broken_large : {broken_large_auroc_score}")
-
-    # AUROC broken_small
-    broken_small_auroc_score = auroc_score(score_good, score_broken_small)
-    logger.info(f"ROC AUC score broken_small : {broken_small_auroc_score}")
-
-    # AUROC contamination
-    contamination_auroc_score = auroc_score(score_good, score_contamination)
-    logger.info(f"ROC AUC score broken_contamination : {contamination_auroc_score}")
+    logger.info(f"ROC AUC score broken_large : {auroc_score(score_good, score_broken_large)}")
+    logger.info(f"ROC AUC score broken_small : {auroc_score(score_good, score_broken_small)}")
+    logger.info(f"ROC AUC score contamination : {auroc_score(score_good, score_contamination)}")
 
 
     torch.save(

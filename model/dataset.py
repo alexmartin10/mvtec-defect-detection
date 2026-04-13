@@ -5,6 +5,15 @@ from torch.utils.data import Dataset
 from torchvision.io import decode_image
 
 class ImageDataset(Dataset):
+    """PyTorch Dataset for loading images from a directory.
+ 
+    Loads all PNG images recursively from a given directory
+    and applies resizing and normalization transforms.
+ 
+    Args:
+        root_dir: Path to the directory containing images.
+    """
+ 
     def __init__(
         self,
         root_dir: str
